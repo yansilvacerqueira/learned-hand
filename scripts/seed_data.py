@@ -22,6 +22,7 @@ SAMPLE_DOCUMENTS = [
     {
         "filename": "company_handbook.pdf",
         "title": "Company Handbook",
+        "tags": ["hr", "policy", "employee", "handbook"],
         "content": [
             "Welcome to Acme Corporation",
             "",
@@ -41,6 +42,7 @@ SAMPLE_DOCUMENTS = [
     {
         "filename": "technical_specification.pdf",
         "title": "Technical Specification",
+        "tags": ["technical", "documentation", "api", "architecture"],
         "content": [
             "Project: Document Processing System",
             "Version: 1.0",
@@ -65,6 +67,7 @@ SAMPLE_DOCUMENTS = [
     {
         "filename": "meeting_notes_q4.pdf",
         "title": "Q4 Meeting Notes",
+        "tags": ["meeting", "q4", "2024", "business"],
         "content": [
             "Quarterly Review Meeting",
             "Date: October 15, 2024",
@@ -88,6 +91,7 @@ SAMPLE_DOCUMENTS = [
     {
         "filename": "user_guide.pdf",
         "title": "User Guide",
+        "tags": ["documentation", "guide", "user", "tutorial"],
         "content": [
             "DocProc User Guide",
             "",
@@ -113,6 +117,7 @@ SAMPLE_DOCUMENTS = [
     {
         "filename": "security_policy.pdf",
         "title": "Security Policy",
+        "tags": ["security", "policy", "compliance", "important"],
         "content": [
             "Information Security Policy",
             "Effective Date: January 1, 2024",
@@ -177,6 +182,17 @@ def upload_document(filepath: str) -> dict:
         return response.json()
 
 
+def add_tag_to_document(document_id: int, tag_name: str) -> dict:
+    """Add a tag to a document."""
+    response = requests.post(
+        f"{API_URL}/documents/{document_id}/tags",
+        json={"name": tag_name},
+        headers={"Content-Type": "application/json"},
+    )
+    response.raise_for_status()
+    return response.json()
+
+
 def main():
     print(f"Seeding documents to {API_URL}")
     print("-" * 40)
@@ -187,7 +203,18 @@ def main():
 
         print(f"Uploading {doc['filename']}...")
         result = upload_document(filepath)
-        print(f"  Created document ID: {result['id']}")
+        document_id = result["id"]
+        print(f"  Created document ID: {document_id}")
+
+        # Add tags to the document
+        tags = doc.get("tags", [])
+        if tags:
+            print(f"  Adding tags: {', '.join(tags)}")
+            for tag_name in tags:
+                try:
+                    add_tag_to_document(document_id, tag_name)
+                except Exception as e:
+                    print(f"    Warning: Failed to add tag '{tag_name}': {e}")
 
         os.remove(filepath)
 
