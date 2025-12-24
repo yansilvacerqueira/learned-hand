@@ -8,7 +8,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, UploadFile, HTTPException, Query
 from pydantic import PositiveInt
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -204,22 +204,23 @@ async def get_document(document_id: PositiveInt, db: AsyncSession = Depends(get_
 @router.delete("/documents/{document_id}")
 async def delete_document(document_id: PositiveInt, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
-        select(Document, ProcessingStatus)
-        .outerjoin(ProcessingStatus, Document.id == ProcessingStatus.document_id)
-        .where(Document.id == document_id)
+        select(Document).where(Document.id == document_id)
     )
-    row = result.first()
+    document = result.scalar_one_or_none()
 
-    if not row:
+    if not document:
         logger.warning(f"Attempted to delete non-existent document: ID={document_id}")
         raise HTTPException(status_code=404, detail="Document not found")
 
-    document, status = row
     logger.info(f"Deleting document: ID={document_id}, filename={document.filename}")
 
-    if status:
-        db.delete(status)
-    db.delete(document)
+    await db.execute(
+        delete(ProcessingStatus).where(ProcessingStatus.document_id == document_id)
+    )
+
+    await db.execute(
+        delete(Document).where(Document.id == document_id)
+    )
 
     await db.commit()
     logger.info(f"Successfully deleted document: ID={document_id}")
