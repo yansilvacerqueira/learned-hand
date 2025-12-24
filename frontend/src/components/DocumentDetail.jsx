@@ -64,7 +64,8 @@ function DocumentDetail() {
       }
 
       try {
-        const tags = await getAllTags(trimmedQuery);
+        const data = await getAllTags(trimmedQuery, 0, 50);
+        const tags = data.items || data;
         const existingTagNames = new Set(
           (document?.tags || []).map((t) => t.name.toLowerCase())
         );
@@ -145,7 +146,6 @@ function DocumentDetail() {
     [id]
   );
 
-  // Close suggestions on outside click
   useEffect(() => {
     function handleClickOutside(event) {
       if (

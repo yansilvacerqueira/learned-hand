@@ -1,6 +1,8 @@
 from pydantic import BaseModel
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Generic, TypeVar
+
+T = TypeVar('T')
 
 
 class DocumentBase(BaseModel):
@@ -47,3 +49,12 @@ class SearchResult(BaseModel):
 
 class TagCreate(TagBase):
     pass
+
+
+class PaginatedResponse(BaseModel, Generic[T]):
+    items: List[T]
+    total: int
+    skip: int
+    limit: int
+    has_next: bool
+    has_prev: bool

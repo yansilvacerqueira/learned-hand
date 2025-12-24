@@ -3,12 +3,12 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import PositiveInt
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models import Document, Tag
-from app.schemas import TagResponse, TagCreate
+from app.schemas import TagResponse, TagCreate, PaginatedResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -126,23 +126,42 @@ async def get_document_tags(
     return [TagResponse(id=tag.id, name=tag.name, created_at=tag.created_at) for tag in document.tags]
 
 
-@router.get("/tags", response_model=List[TagResponse])
+@router.get("/tags", response_model=PaginatedResponse[TagResponse])
 async def list_all_tags(
+    skip: int = Query(0, ge=0, description="Number of tags to skip"),
+    limit: int = Query(5, ge=1, le=1000, description="Maximum number of tags to return"),
     search: Optional[str] = Query(None, description="Search tags by name (case-insensitive)"),
     db: AsyncSession = Depends(get_db)
 ):
-    """Get all available tags, optionally filtered by search query."""
+    """Get all available tags with pagination, optionally filtered by search query."""
+    count_query = select(func.count(Tag.id))
+    if search and search.strip():
+        search_term = search.lower().strip()
+        count_query = count_query.where(Tag.name.ilike(f"%{search_term}%"))
+
+    total_result = await db.execute(count_query)
+    total = total_result.scalar_one()
+
     query = select(Tag)
 
     if search and search.strip():
         search_term = search.lower().strip()
         query = query.where(Tag.name.ilike(f"%{search_term}%"))
 
-    query = query.order_by(Tag.name)
+    query = query.order_by(Tag.name).offset(skip).limit(limit)
     result = await db.execute(query)
     tags = result.scalars().all()
 
-    return [TagResponse(id=tag.id, name=tag.name, created_at=tag.created_at) for tag in tags]
+    items = [TagResponse(id=tag.id, name=tag.name, created_at=tag.created_at) for tag in tags]
+
+    return PaginatedResponse(
+        items=items,
+        total=total,
+        skip=skip,
+        limit=limit,
+        has_next=(skip + limit) < total,
+        has_prev=skip > 0,
+    )
 
 
 @router.delete("/tags/{tag_id}")

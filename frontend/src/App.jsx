@@ -13,8 +13,9 @@ function App() {
 
   const checkTags = useCallback(async () => {
     try {
-      const tags = await getAllTags();
-      setHasTags(tags.length > 0);
+      const data = await getAllTags(null, 0, 1);
+      const tags = data.items || data;
+      setHasTags(Array.isArray(tags) ? tags.length > 0 : false);
     } catch (err) {
       console.error("Failed to check tags:", err);
       setHasTags(false);
@@ -57,13 +58,13 @@ function App() {
             path="/"
             element={
               <>
+                <UploadForm onUploadSuccess={handleUploadSuccess} />
+                <DocumentList ref={documentListRef} />
                 {hasTags && (
                   <div className="tag-manager-container">
                     <TagManager onTagDeleted={handleTagDeleted} />
                   </div>
                 )}
-                <UploadForm onUploadSuccess={handleUploadSuccess} />
-                <DocumentList ref={documentListRef} />
               </>
             }
           />

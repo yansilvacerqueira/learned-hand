@@ -8,12 +8,12 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, UploadFile, HTTPException, Query
 from pydantic import PositiveInt
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models import Document, ProcessingStatus, Tag, document_tags
-from app.schemas import DocumentResponse, DocumentDetail
+from app.schemas import DocumentResponse, DocumentDetail, PaginatedResponse
 from app.services.pdf_processor import extract_text_from_pdf
 from app.config import settings
 
@@ -121,10 +121,10 @@ async def upload_document(file: UploadFile, db: AsyncSession = Depends(get_db)):
     return {"id": document.id, "filename": document.filename}
 
 
-@router.get("/documents")
+@router.get("/documents", response_model=PaginatedResponse[DocumentResponse])
 async def list_documents(
     skip: int = Query(0, ge=0, description="Number of documents to skip"),
-    limit: int = Query(100, ge=1, le=1000, description="Maximum number of documents to return"),
+    limit: int = Query(5, ge=1, le=1000, description="Maximum number of documents to return"),
     tag: Optional[str] = Query(None, description="Filter documents by tag name"),
     db: AsyncSession = Depends(get_db)
 ):
@@ -133,11 +133,18 @@ async def list_documents(
 
     Args:
         skip: Number of documents to skip (default: 0)
-        limit: Maximum number of documents to return (default: 100, max: 1000)
+        limit: Maximum number of documents to return (default: 5, max: 1000)
         tag: Optional tag name to filter documents
         db: Database session
     """
     from sqlalchemy.orm import selectinload
+
+    count_query = select(func.count(Document.id))
+    if tag:
+        count_query = count_query.join(Document.tags).where(Tag.name == tag)
+
+    total_result = await db.execute(count_query)
+    total = total_result.scalar_one()
 
     query = select(Document).options(
         selectinload(Document.processing_status),
@@ -167,7 +174,14 @@ async def list_documents(
             )
         )
 
-    return response
+    return PaginatedResponse(
+        items=response,
+        total=total,
+        skip=skip,
+        limit=limit,
+        has_next=(skip + limit) < total,
+        has_prev=skip > 0,
+    )
 
 
 @router.get("/documents/{document_id}")

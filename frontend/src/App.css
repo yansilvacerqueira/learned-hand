@@ -80,6 +80,7 @@ body {
   background: white;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding-bottom: 1rem;
 }
 
 .document-list h2 {
@@ -89,21 +90,31 @@ body {
 }
 
 .document-item {
-  padding: 1rem 1.5rem;
+  padding: 1.5rem 1.5rem;
   border-bottom: 1px solid #eee;
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: 1.5rem;
 }
 
 .document-item:last-child {
   border-bottom: none;
 }
 
+.document-item > div:first-child {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
 .document-item a {
   color: #3498db;
   text-decoration: none;
   font-weight: 500;
+  font-size: 1.1rem;
+  margin-bottom: 0.25rem;
 }
 
 .document-item a:hover {
@@ -113,6 +124,12 @@ body {
 .document-meta {
   color: #7f8c8d;
   font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.document-item > div:last-child {
+  flex-shrink: 0;
+  text-align: right;
 }
 
 .document-detail {
@@ -355,15 +372,16 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  margin-top: 0.5rem;
+  margin-top: 0.75rem;
 }
 
 .document-list-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 1.5rem;
+  padding: 1.5rem 1.5rem;
   border-bottom: 1px solid #eee;
+  margin-bottom: 0.5rem;
 }
 
 .document-list-header h2 {
@@ -463,6 +481,7 @@ body {
   padding: 1.5rem;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-top: 2rem;
   margin-bottom: 2rem;
 }
 
@@ -510,4 +529,40 @@ body {
 .tag-manager-delete:disabled {
   background-color: #bdc3c7;
   cursor: not-allowed;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding: 1.5rem 1.5rem 0;
+  border-top: 1px solid #eee;
+}
+
+.pagination-btn {
+  background-color: #3498db;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: background-color 0.2s;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background-color: #2980b9;
+}
+
+.pagination-btn:disabled {
+  background-color: #bdc3c7;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.pagination-info {
+  color: #7f8c8d;
+  font-size: 0.875rem;
 }

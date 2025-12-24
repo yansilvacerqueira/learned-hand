@@ -24,11 +24,12 @@ export async function uploadDocument(file) {
   return handleResponse(response);
 }
 
-export async function getDocuments(tag = null) {
-  const url = tag
-    ? `${API_BASE}/documents?tag=${encodeURIComponent(tag)}`
-    : `${API_BASE}/documents`;
-  const response = await fetch(url);
+export async function getDocuments(tag = null, skip = 0, limit = 5) {
+  const params = new URLSearchParams();
+  if (tag) params.append("tag", tag);
+  params.append("skip", skip.toString());
+  params.append("limit", limit.toString());
+  const response = await fetch(`${API_BASE}/documents?${params.toString()}`);
   return handleResponse(response);
 }
 
@@ -77,12 +78,14 @@ export async function getDocumentTags(documentId) {
   return handleResponse(response);
 }
 
-export async function getAllTags(search = null) {
-  let url = `${API_BASE}/tags`;
+export async function getAllTags(search = null, skip = 0, limit = 5) {
+  const params = new URLSearchParams();
   if (search && search.trim()) {
-    url += `?search=${encodeURIComponent(search.trim())}`;
+    params.append("search", search.trim());
   }
-  const response = await fetch(url);
+  params.append("skip", skip.toString());
+  params.append("limit", limit.toString());
+  const response = await fetch(`${API_BASE}/tags?${params.toString()}`);
   return handleResponse(response);
 }
 
