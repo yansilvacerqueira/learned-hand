@@ -777,3 +777,31 @@ Implement a authentication and authorization system using Role-Based Access Cont
 - Protected route decorators
 - Frontend login/register pages
 - Token storage and refresh logic
+
+---
+
+## 📋 TODO: Add Debounce to Tag Search
+
+### Overview
+
+Implement debounce functionality for the tag search/autocomplete feature to reduce unnecessary API calls and improve performance.
+
+### Issue
+
+Currently, the tag search in `DocumentDetail.jsx` makes an API call on every keystroke, which can result in:
+
+- Excessive API requests
+- Poor performance with slow network connections
+- Unnecessary database queries
+- Potential rate limiting issues
+
+### Solution
+
+Add debounce to the `handleTagInputChange` function to delay API calls until the user stops typing for a specified duration (e.g., 300-500ms).
+
+### Implementation
+
+- Use `useDebounce` hook or `setTimeout`/`clearTimeout`
+- Delay API call by 300-500ms after user stops typing
+- Cancel pending requests when new input is received
+- Maintain responsive UI feedback
