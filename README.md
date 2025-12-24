@@ -10,6 +10,11 @@ A simple document processing system for uploading, viewing, and searching PDF do
 - View individual document details with extracted text
 - Delete documents
 
+- **Document tagging**: Add custom tags to organize documents
+- **Tag filtering**: Filter documents by tags
+- **Tag autocomplete**: Search existing tags when adding to documents
+- **Tag management**: Delete tags from the system
+
 ## Tech Stack
 
 - **Backend:** FastAPI (Python 3.11+), SQLAlchemy 2.0 (async), PostgreSQL
@@ -79,6 +84,17 @@ npm run dev
 | Method | Endpoint            | Description                 |
 | ------ | ------------------- | --------------------------- |
 | GET    | `/search?q={query}` | Search documents by content |
+
+### Tags
+
+| Method | Endpoint                        | Description                            |
+| ------ | ------------------------------- | -------------------------------------- |
+| GET    | `/tags`                         | List all tags (optional `?search={q}`) |
+| DELETE | `/tags/{tag_id}`                | Delete a tag from the system           |
+| POST   | `/documents/{id}/tags`          | Add a tag to a document                |
+| GET    | `/documents/{id}/tags`          | Get all tags for a document            |
+| DELETE | `/documents/{id}/tags/{tag_id}` | Remove a tag from a document           |
+| GET    | `/documents?tag={tag_name}`     | Filter documents by tag                |
 
 ### Health
 
