@@ -77,7 +77,18 @@ export async function getDocumentTags(documentId) {
   return handleResponse(response);
 }
 
-export async function getAllTags() {
-  const response = await fetch(`${API_BASE}/tags`);
+export async function getAllTags(search = null) {
+  let url = `${API_BASE}/tags`;
+  if (search && search.trim()) {
+    url += `?search=${encodeURIComponent(search.trim())}`;
+  }
+  const response = await fetch(url);
+  return handleResponse(response);
+}
+
+export async function deleteTag(tagId) {
+  const response = await fetch(`${API_BASE}/tags/${tagId}`, {
+    method: "DELETE",
+  });
   return handleResponse(response);
 }

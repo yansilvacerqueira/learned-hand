@@ -1,9 +1,9 @@
 import logging
-from typing import List
+from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import PositiveInt
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -128,11 +128,56 @@ async def get_document_tags(
 
 @router.get("/tags", response_model=List[TagResponse])
 async def list_all_tags(
+    search: Optional[str] = Query(None, description="Search tags by name (case-insensitive)"),
     db: AsyncSession = Depends(get_db)
 ):
-    """Get all available tags."""
-    result = await db.execute(select(Tag).order_by(Tag.name))
+    """Get all available tags, optionally filtered by search query."""
+    query = select(Tag)
+
+    if search and search.strip():
+        search_term = search.lower().strip()
+        query = query.where(Tag.name.ilike(f"%{search_term}%"))
+
+    query = query.order_by(Tag.name)
+    result = await db.execute(query)
     tags = result.scalars().all()
 
     return [TagResponse(id=tag.id, name=tag.name, created_at=tag.created_at) for tag in tags]
+
+
+@router.delete("/tags/{tag_id}")
+async def delete_tag(
+    tag_id: PositiveInt,
+    db: AsyncSession = Depends(get_db)
+):
+    """Delete a tag from the system. This will remove the tag from all documents."""
+    from sqlalchemy.orm import selectinload
+    from app.models import document_tags
+
+    result = await db.execute(
+        select(Tag)
+        .options(selectinload(Tag.documents))
+        .where(Tag.id == tag_id)
+    )
+    tag = result.scalar_one_or_none()
+
+    if not tag:
+        raise HTTPException(status_code=404, detail="Tag not found")
+
+    document_count = len(tag.documents) if tag.documents else 0
+
+    logger.info(f"Deleting tag {tag_id} ({tag.name}) from {document_count} document(s)")
+
+    await db.execute(
+        delete(document_tags).where(document_tags.c.tag_id == tag_id)
+    )
+
+    await db.execute(delete(Tag).where(Tag.id == tag_id))
+    await db.commit()
+
+    logger.info(f"Successfully deleted tag {tag_id}")
+    return {
+        "message": f"Tag '{tag.name}' deleted",
+        "removed_from_documents": document_count
+    }
 

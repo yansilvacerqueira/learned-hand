@@ -12,7 +12,7 @@ from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models import Document, ProcessingStatus, Tag
+from app.models import Document, ProcessingStatus, Tag, document_tags
 from app.schemas import DocumentResponse, DocumentDetail
 from app.services.pdf_processor import extract_text_from_pdf
 from app.config import settings
@@ -213,6 +213,10 @@ async def delete_document(document_id: PositiveInt, db: AsyncSession = Depends(g
         raise HTTPException(status_code=404, detail="Document not found")
 
     logger.info(f"Deleting document: ID={document_id}, filename={document.filename}")
+
+    await db.execute(
+        delete(document_tags).where(document_tags.c.document_id == document_id)
+    )
 
     await db.execute(
         delete(ProcessingStatus).where(ProcessingStatus.document_id == document_id)
