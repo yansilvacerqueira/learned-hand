@@ -4,6 +4,7 @@ import uuid
 import logging
 import aiofiles
 from datetime import datetime
+from typing import Optional
 
 from fastapi import APIRouter, Depends, UploadFile, HTTPException, Query
 from pydantic import PositiveInt
@@ -11,7 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models import Document, ProcessingStatus
+from app.models import Document, ProcessingStatus, Tag
 from app.schemas import DocumentResponse, DocumentDetail
 from app.services.pdf_processor import extract_text_from_pdf
 from app.config import settings
@@ -124,25 +125,31 @@ async def upload_document(file: UploadFile, db: AsyncSession = Depends(get_db)):
 async def list_documents(
     skip: int = Query(0, ge=0, description="Number of documents to skip"),
     limit: int = Query(100, ge=1, le=1000, description="Maximum number of documents to return"),
+    tag: Optional[str] = Query(None, description="Filter documents by tag name"),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    List documents with pagination.
+    List documents with pagination and optional tag filtering.
 
     Args:
         skip: Number of documents to skip (default: 0)
         limit: Maximum number of documents to return (default: 100, max: 1000)
+        tag: Optional tag name to filter documents
         db: Database session
     """
     from sqlalchemy.orm import selectinload
 
-    result = await db.execute(
-        select(Document)
-        .options(selectinload(Document.processing_status))
-        .offset(skip)
-        .limit(limit)
-        .order_by(Document.created_at.desc())
+    query = select(Document).options(
+        selectinload(Document.processing_status),
+        selectinload(Document.tags)
     )
+
+    if tag:
+        query = query.join(Document.tags).where(Tag.name == tag)
+
+    query = query.offset(skip).limit(limit).order_by(Document.created_at.desc())
+
+    result = await db.execute(query)
     documents = result.scalars().all()
 
     response = []
@@ -156,6 +163,7 @@ async def list_documents(
                 page_count=doc.page_count,
                 status=status.status if status else "unknown",
                 created_at=doc.created_at,
+                tags=doc.tags or [],
             )
         )
 
@@ -168,7 +176,10 @@ async def get_document(document_id: PositiveInt, db: AsyncSession = Depends(get_
 
     result = await db.execute(
         select(Document)
-        .options(selectinload(Document.processing_status))
+        .options(
+            selectinload(Document.processing_status),
+            selectinload(Document.tags)
+        )
         .where(Document.id == document_id)
     )
     document = result.scalar_one_or_none()
@@ -186,6 +197,7 @@ async def get_document(document_id: PositiveInt, db: AsyncSession = Depends(get_
         page_count=document.page_count,
         status=status.status if status else "unknown",
         created_at=document.created_at,
+        tags=document.tags or [],
     )
 
 
@@ -204,6 +216,7 @@ async def delete_document(document_id: PositiveInt, db: AsyncSession = Depends(g
 
     document, status = row
     logger.info(f"Deleting document: ID={document_id}, filename={document.filename}")
+
     if status:
         db.delete(status)
     db.delete(document)

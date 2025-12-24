@@ -1,16 +1,19 @@
 import { forwardRef, useEffect, useImperativeHandle, useState } from "react";
 import { Link } from "react-router-dom";
-import { getDocuments } from "../api";
+import { getAllTags, getDocuments } from "../api";
 import { formatFileSize } from "../utils/formatters";
 
 const DocumentList = forwardRef(function DocumentList(props, ref) {
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedTag, setSelectedTag] = useState(null);
+  const [availableTags, setAvailableTags] = useState([]);
 
   useEffect(() => {
     loadDocuments();
-  }, []);
+    loadTags();
+  }, [selectedTag]);
 
   useImperativeHandle(ref, () => ({
     refresh: loadDocuments,
@@ -19,13 +22,24 @@ const DocumentList = forwardRef(function DocumentList(props, ref) {
   async function loadDocuments() {
     try {
       setLoading(true);
-      const data = await getDocuments();
+      const data = await getDocuments(selectedTag);
       setDocuments(data);
     } catch (err) {
       setError("Failed to load documents");
     } finally {
       setLoading(false);
     }
+  }
+
+  async function loadTags() {
+    try {
+      const tags = await getAllTags();
+      setAvailableTags(tags);
+    } catch (err) {}
+  }
+
+  function handleTagFilter(tagName) {
+    setSelectedTag(tagName === selectedTag ? null : tagName);
   }
 
   if (loading) {
@@ -38,11 +52,43 @@ const DocumentList = forwardRef(function DocumentList(props, ref) {
 
   return (
     <div className="document-list">
-      <h2>Documents</h2>
+      <div className="document-list-header">
+        <h2>Documents</h2>
+        {availableTags.length > 0 && (
+          <div className="tag-filter">
+            <span>Filter by tag: </span>
+            <button
+              className={
+                selectedTag === null
+                  ? "tag-filter-btn active"
+                  : "tag-filter-btn"
+              }
+              onClick={() => handleTagFilter(null)}
+            >
+              All
+            </button>
+            {availableTags.map((tag) => (
+              <button
+                key={tag.id}
+                className={
+                  selectedTag === tag.name
+                    ? "tag-filter-btn active"
+                    : "tag-filter-btn"
+                }
+                onClick={() => handleTagFilter(tag.name)}
+              >
+                {tag.name}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       {documents.length === 0 ? (
         <div className="empty-state">
-          No documents uploaded yet. Upload a PDF to get started.
+          {selectedTag
+            ? `No documents found with tag "${selectedTag}"`
+            : "No documents uploaded yet. Upload a PDF to get started."}
         </div>
       ) : (
         documents.map((doc) => (
@@ -54,6 +100,16 @@ const DocumentList = forwardRef(function DocumentList(props, ref) {
                 {doc.page_count} pages | {formatFileSize(doc.file_size)} |{" "}
                 {doc.status}
               </div>
+
+              {doc.tags && doc.tags.length > 0 && (
+                <div className="document-tags">
+                  {doc.tags.map((tag) => (
+                    <span key={tag.id} className="tag">
+                      {tag.name}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="document-meta">

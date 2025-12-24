@@ -24,8 +24,11 @@ export async function uploadDocument(file) {
   return handleResponse(response);
 }
 
-export async function getDocuments() {
-  const response = await fetch(`${API_BASE}/documents`);
+export async function getDocuments(tag = null) {
+  const url = tag
+    ? `${API_BASE}/documents?tag=${encodeURIComponent(tag)}`
+    : `${API_BASE}/documents`;
+  const response = await fetch(url);
   return handleResponse(response);
 }
 
@@ -45,5 +48,36 @@ export async function searchDocuments(query) {
   const response = await fetch(
     `${API_BASE}/search?q=${encodeURIComponent(query)}`
   );
+  return handleResponse(response);
+}
+
+export async function addTagToDocument(documentId, tagName) {
+  const response = await fetch(`${API_BASE}/documents/${documentId}/tags`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ name: tagName }),
+  });
+  return handleResponse(response);
+}
+
+export async function removeTagFromDocument(documentId, tagId) {
+  const response = await fetch(
+    `${API_BASE}/documents/${documentId}/tags/${tagId}`,
+    {
+      method: "DELETE",
+    }
+  );
+  return handleResponse(response);
+}
+
+export async function getDocumentTags(documentId) {
+  const response = await fetch(`${API_BASE}/documents/${documentId}/tags`);
+  return handleResponse(response);
+}
+
+export async function getAllTags() {
+  const response = await fetch(`${API_BASE}/tags`);
   return handleResponse(response);
 }
